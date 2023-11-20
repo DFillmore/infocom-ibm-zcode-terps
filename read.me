@@ -1,0 +1,151 @@
+IBM XZIP
+
+Although the IBM XZIP is mostly written in C, certain liberties have
+been taken:
+1) Most of the normal C library routines have been eliminated, one way
+   or another.  I/O is done through hand-coded routines, but they have
+   different names and interfaces.  Most of the standard Microsoft C
+   startup routines have been eliminated, or replaced with null
+   routines.  Thus, the library routine that parses the command line has
+   been eliminated; the XZIP looks at the unparsed command line instead.
+   The following library routines remain:
+	_astart, which is the actual startup routine.
+	close, for some reason.
+	_cintDIV, which is the handler for divide by 0.  Most of the
+	  stuff it calls has been replaced.
+	_amsg_exit, which is the fatal error routine.  Everything it
+	  calls has been replaced.
+	inp, hardware input.
+	outp, hardware output.  inp is never used; outp is used for
+	  sound.
+	setjmp/longjmp.  Used to escape from recursive invocations of
+	  main_loop.
+	_aNlmul, aNlshr.  32-bit multiply and shift.
+2) Certain critical routines have been hand-coded.  These include the
+   table operations (INTBL, PRINTT, COPYT), and the most common virtual
+   memory access routines.
+3) Although most machine-dependent stuff is in SYSDEP, not all of it is.
+   In particular, EZIP.C is fairly swarming with the stuff, since that's
+   where the thing starts up.
+4) The stack is relatively small (1024 bytes).  That seems to be
+   adequate; I'm not sure how much smaller it could get.  That's the C
+   stack, by the way, not the game stack.
+5) There is no storage allocation available except in FAR space, by
+   using the routine halloc (which is a direct call to the DOS memory
+   allocator).  The only dynamically-allocated memory is for the game
+   itself, and for internal save if that's used.
+
+Kludges during startup
+
+There is a complicated relationship among machine type, screen mode, and
+game size.  To wit:
+
+If the game wants to run in graphics mode, and the user doesn't override
+it, a 1K buffer is required for font storage (a pointer to the buffer is
+stored in 0:7C and 0:7E for the use of the graphics card).  If the game
+is not in graphics mode, the 1K buffer can be used for swapping instead.
+This may make the game playable when it wouldn't otherwise be (although
+we require that the entire preload fit in FAR space, in a contiguous
+chunk).
+
+On the Tandy (and PCjr, if anyone cares), there's a four-color graphics
+mode.  Unfortunately, it requires an extra 16K of RAM (both machines use
+main memory for the screen buffer), which comes straight out of game
+space.  It's actually worse than that, because game space must be
+allocated BEFORE entering the four-color graphics mode--when you enter
+it, DOS's free list is trashed, so you can no longer allocate anything.
+
+The startup procedure goes like this:
+
+1) Find out how much memory is available.  The most we'll need is 336K:
+   256K for the game, 64K for an internal save, and 16K for graphics
+   memory.
+2) Determine whether we're on a Tandy/PCjr.  PCjr is easy--F000:FEEE is
+   FD.  Tandy is a little harder--the copyright message is somewhere in
+   the 256 bytes after F000:C000.  This only applies if we're in
+   graphics mode and if the user wants color.  If so, reduce the memory
+   available by 16K.
+3) If an internal save is desired, we can now determine whether it'll
+   fit.  The internal save is just the impure area plus the game stack
+   (1K words); we need ENDLOD bytes + internal save size + 5K (arbitrary
+   number, would give 10 swapping pages) available to allow internal
+   saves.
+4) If the preload is sufficiently small, and there's enough memory
+   available, the amount preloaded is raised to 43.5K, to match the C64
+   preload.  This is a hack to make LZIP games, which by definition have
+   a 43.5K preload, run faster on small machines.
+5) We can now allocate the game memory (and isave memory, if there's
+   room and the game wants it and the user hasn't turned it off), then
+   initialize the screen and display the copyright message.
+6) If there's enough memory to load the entire game, it's just read in
+   in one chunk, so there's no need for page tables and such.  They are,
+   regrettably, still allocated.  Otherwise, only the preload (normally
+   the larger of ENDLOD and 43.5K) will be read in; the remainder of
+   free space, plus the font buffer if we're not in graphics mode, will
+   go into the list of swapping pages.  We're now ready to roll.
+
+Mice
+
+XZIP provides extremely limited support for the Microsoft mouse.  This
+is under the control of the /R switch on the command line, because I
+found that some machine/system combinations (a Compaq running dos 2.11,
+for example) didn't fail gracefully on INT 33 (which is the call to do
+things to the mouse); there was therefore no reliable way to tell
+whether the mouse was around or not.
+
+The mouse cursor is restricted to screen 1 (if there's no screen 1, the
+mouse is disabled), and is hidden when screen 1 is active.  This keeps
+the mouse cursor from trashing stuff as it's being displayed; it
+obviously puts severe limitations on what one can do with it.
+
+XZIP itself doesn't use the mouse for anything--it just passes mouse
+events along to the game.  The only (hardware) mouse event that it
+recognizes is left-button release; all the others are ignored.
+
+Recognized mouse events cause an interrupt, which runs the routine in
+MOUSE.ASM.  The mouse coordinates and event type are dumped into a ring
+buffer (length 8), thus allowing mouse-ahead.  Read and input check the
+ring buffer regularly, and treat the mouse events as keyboard inputs.
+
+Note:
+   Games that don't have a lowcore extension table can't use the mouse,
+   so it isn't turned on for them.  Beyond Zork gets a mouse; Border
+   Zone doesn't, even if the user asks for it.
+
+Command line switches
+
+The normal C library routine that parses the command line has been
+suppressed, since it takes up (and allocates) a lot of space.  Instead,
+the command line is parsed directly.  It's stored in the PSP, starting
+at byte 80H; the PSP is obtained either by using a system call (dos
+version 3.0 and above) or by looking 10 paragraphs in front of the code
+segment (which is observed to work in lower dos versions).
+
+Similarly, since we don't use any environment variables, the routines
+(_setenvp and _getenvp) that manipulate the environment are redefined.
+
+Error handling
+
+I/O errors are caught by the `critical error handler', which you can
+install by using INT 25H with an argument of 24H.  The error handler
+itself is defined in farread.asm; it gets a reasonable set of segment
+registers together, gathers whatever information dos will provide, and
+calls the C routine do_error.
+
+Do_error attempts to display an intelligible error message; it then asks
+the user whether to abort or retry.  If the user requests an abort,
+crterr will simply flush the return address into dos, set the carry
+flag, and iret; this will cause the system call that failed to return.
+If the user requests a retry, it does much the same thing; carry is
+cleared, and the return address is decremented by 2.  This causes the
+call to re-execute WITH THE SAME REGISTERS IT HAD BEFORE.  This will not
+work well on partial writes, but there aren't many cases where that's
+the problem.  I tried to use the RETRY return from the critical error
+handler, but that caused DOS to die too often.
+
+When the user requests an abort, an appropriate flag is set, so the
+high-level code can tell.  In some cases, an abort is fatal (on reading
+in a swapping page, for example); in others, it can simply be ignored. 
+The reason this whole hack exists is that the normal dos critical error
+handler returns you to dos on abort; it doesn't seem reasonable for
+printer out of paper to return you to dos.

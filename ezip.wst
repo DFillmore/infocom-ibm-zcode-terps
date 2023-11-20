@@ -1,0 +1,60 @@
+
+char lc(ch)
+char ch;
+{
+  if ((ch >= 'A') && (ch <= 'Z'))
+    ch += 'a' - 'A';
+  return(ch & 255);
+}
+
+int xpush(value,stack)			/* push value onto specified stack */
+int value;
+ZIPINT stack;
+{
+int temp;
+if (!GTVWRD(stack))			/* if stack full */
+    PRED(ZFALSE);			/* no can do fcn. */
+else
+    temp = GTVWRD(stack);		/* place contents of stack[0] in temp */
+    PTVWRD(stack + (2*temp),value);	/* place value in stack */
+    PTVWRD(stack,temp-1);		/* adjust stack[0] */
+    PRED(ZTRUE);			/* fcn. complete */
+}
+
+int pop(stack)				/* pop val. from specified stack */
+ZIPINT stack;
+{
+if (argblk[0])				/* if there is a specified stack */
+    putval(pop_save_stuff(argblk[1]));	/* pop value off stack */
+else
+    putval(POPZ());			/* pop value off game stack (zstack) */
+}
+
+mouse_info(table)
+ZIPINT table;
+{
+int temp;
+
+    md_mouse(GET_MOUSE_POSITION);		/* special note: the way that */
+    PTVWRD(table,mouse_cur_x);			/* function 3 of the mouse interrupt */
+    PTVWRD(table+2,mouse_cur_y);		/* works is the inverse bit setting */
+    if (mouse_buttons && mouse_buttons != 3)	/* of the spec. for mouse_info. Hence */
+	temp=mouse_buttons ^ 3;			/* we use a bitwise xor to reverse the */
+    else					/* bits. Understand ? */
+	temp=mouse_buttons;
+    PTVWRD(table+4,temp);
+} 
+/*
+fstack(val,stack)			/* flush n elements from stack */
+int val;
+ZIPINT stack;
+{
+int temp;
+    if (argblk[0] != 2)			/* if 2nd arg. !exist (specified stack) */
+	stack = zstack;			/* use game stack as default */
+    
+    temp=GTVWRD(stack);			/* place # of slots left in stack */
+    PTVWRD(stack,(temp+val));		/* in temp, add this to num, insert in */
+    					/* stack[0] /
+}
+*/

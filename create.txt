@@ -1,0 +1,44 @@
+Care and feeding of IBM XZIP
+
+1) Creating the EXE file
+
+   In the ZIP/EZIP world, there is a gamename.COM file.  In the XZIP
+   world, it's gamename.EXE, since XZIP can't be put in COM format.  To
+   start, copy XZIP.EXE to gamename.EXE.  Then run the MAKEZIP program,
+   as follows:
+	MAKEZIP gamename.EXE name-of-dat-file game-name copyright-date
+   thus:
+	MAKEZIP BEYOND.EXE BEYOND.DAT Beyond_Zork 1987
+   where any spaces in the actual full game name are replaced by _.
+
+   This will print a message giving the file offset for each string
+   added.  It does NOT check any of the arguments for validity, except,
+   of course, that the gamename.EXE file has to exist.  The gamename.EXE
+   file need not be on the current disk or in the current
+   directory--MAKEZIP C:\GAMES\BEYOND.EXE ... would work just fine.
+
+   Note that the datfile name is limited to twelve characters, including
+   the .DAT part; the copyright date is limited to four; and the game
+   name is limited to the length of "Nord and Bert Couldn't Make Head or
+   Tail of It".
+
+2) Dealing with fonts
+
+   With normal games, the game.ZIP file becomes the game.DAT file
+   unmodified.  Games that use funny fonts, like Beyond Zork, must have
+   the fonts appended to the dat file before it can be used.  The
+   program MAKEDAT does this.  It takes N+1 arguments, where N is the
+   number of fonts used by the game:
+	MAKEDAT datfile-name I J K ...
+   Thus:
+	MAKEDAT BEYOND.DAT 3
+   The file BEYOND.DAT must exist, and must be fresh--you can only run
+   MAKEDAT on it once.  The remaining arguments are the font ids of the
+   fonts this game uses.  They must be represented by files FONTn.DAT in
+   the connected directory; the font files will be appended to the
+   game.DAT file.  If a file is missing, MAKEDAT will complain BEFORE it
+   modifies the DAT file, so you're reasonably safe in that case.
+
+   The game.DAT file can be anywhere:  MAKEDAT B:BEYOND.DAT 3 will work
+   just fine.  The FONTn.DAT files MUST be on the current disk, in the
+   current directory.

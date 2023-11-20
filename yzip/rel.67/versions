@@ -1,0 +1,351 @@
+/*****************************************************************/
+/* 1-January 16, 1989 : JDA
+/*	This is my first version.
+/*	Many cosmetic changes and additions to the source files.
+/*
+/* 2-January 17, 1989 : JDA
+/*	More cosmetic changes to:
+/*	   sysdep1
+/*	   loop.c
+/*	Changed glast_space from an int to char *
+/*	Made a bunch of EXZIP defined vars in extern.h be externs
+/*	   (MSC 5.1 doesn't complain about same globals, just makes
+/*	   them be the same thing - odd, I think)
+/*	Mucked heavily with loops in GETP and GETPT
+/* 3-January 18, 1989
+/*      Mucked with:
+/*        yzip.c
+/*      Fixed some problems in loop.c
+/* 4-January 19, 1989
+/*      Mucked with:
+/*        photo.c
+/*        disk.c
+/*        zipdefs.h
+/*      Took out all vestiges of ZIP, ATT, EZIP, etc. defines - now
+/*        just a YZIP source file!
+/*      Did mucho mucking with loops and such in photo.c
+/*      Added function prototypes
+/*      
+/* 5-January 23, 1989
+/*      Tried to get above mucking to work
+/*
+/* 6-January 24, 1989
+/*      Got above mucking to work.
+/*      Optimizing photo.c
+/*      Mucked with:
+/*        error.c
+/*        game.c            
+/* 7-January 25, 1989
+/*      Mucked with:
+/*        game.c
+/*        sysdep2.c
+/*        loop.c
+/*
+/* 8-January 27, 1989
+/*      Turbo C version
+/*
+/* 9-January 30, 1989
+/*      Mucked more with loop.c
+/*
+/*10-February 1, 1989
+/*      Played with read.c
+/*        status.c
+/*        sysdep1.c
+/*        virtual.c
+/*
+/*11-February 8, 1989
+/*      Make paging offset builder say i*BLKSIZ is a long
+/*
+/*12-February 17, 1989
+/*      Take out argblk[0] check in winget/winput
+/*
+/*13-February 18, 1989
+/*      Fix xpush (do *2, not /2)
+/*      Fix ppred (compare offset to 1, not > 0)
+/*      Add mcga_scroll call to md_mcrlf
+/*      Have only one md_clr, and fix it's call in loop.c
+/*      Add clear_area routine
+/*      Add Max_screen_width and Max_screen_height globals
+/*      Add screen_clear routine, which does clear -1
+/*
+/*14-February 18, 1989
+/*      Complete change window structure
+/*
+/*15-February 20, 1989
+/*      More wholesale changes, mostly to color
+/*      Add new font width/height globals
+/*
+/*16-February 21, 1989
+/*      Trying to fix window positions
+/*
+/*17-February 22, 1989
+/*      Add Display and do all kinds of things to the video modes
+/*
+/*18-February 27, 1989
+/*      Fix end of screen scrolling by checking for 2*Font_height
+/*
+/*19-February 28, 1989
+/*      Make curpos in window structure be absolute position, not window
+/*              relative
+/*      Call cr_int before CR, not after
+/*
+/*20-March 1, 1989
+/*      Add windows.c
+/*      Put in MCGA cursor stuff
+/*      Add curset -1/-2
+/*      Add color -1
+/*      Fix md_clr (called clear area incorrectly)
+/*
+/*21-March 3, 1989
+/*      Take out (memreq-memavail) > isave-size check
+/*      Don't forget to one base window pos for winget
+/*      Add kludgey +1 to mcga_scroll call in scroll (for some reason?)
+/*
+/*22-March 29, 1989
+/*      Make hlite flush the buffer
+/*      Have bufout just flush the buffer
+/*      md_hlite ought to reset fore/back colors if reversed on no
+/*              highlight
+/*      Don't have mcga_putc do the reverse video stuff
+/*      Make Zip_font_width be 5 for MCGA (width of zero char)
+/*              and implement mono spaced font in mcga_putc
+/*      Wack the daylights out of output.c and all the table output, both
+/*              formatted and unformatted.
+/*
+/*23-April 5, 1989
+/*      Rewrite photo.c, calling it pic.c
+/*              Make a bunch of new structures
+/*              Call Fachini's graphics.asm stuff
+/*      Integrate graphics.asm
+/*      Handle local directories both with and without palette offsets
+/*
+/*25-April 6, 1989
+/*      Nothing special happens on Font 4 (monospaced font)
+/*
+/*26-April 8, 1989
+/*      Add assembly language MCGA character output
+/*
+/*27-April 13, 1989
+/*      Set argblk[0] == 2 in main loop for two op
+/*
+/*28-April 14, 1989
+/*	Add assembly language EGA character output
+/*	Do EGA cursor like MCGA
+/*
+/*29-April 18, 1989
+/*	Mess with md_set_font
+/*
+/*30-April 19, 1989
+/*	Do monospaced font in display_char13
+/*
+/*31-April 20, 1989
+/*	Make all EGA positions be even multiples of 8 (both horiz and
+/*		vert)
+/*32-April 25, 1989
+/*	Do the same for CGA
+/*
+/*33-April 26, 1989
+/*	Don't fatal on unknown picture, just return FALSE on picinf, and
+/*   just return on disp_pic
+/*
+/*34-May 1, 1989
+/*	Set flags up based upon known state of machine
+/*
+/*35-May 2, 1989
+/*	Don't use font buffer for CGA either
+/*	Have PICINF 0 return TRUE
+/*	Make sure to hfree things up afterwards
+/*
+/*36-May 4, 1989
+/*	Set Foreground color in CGA mode 6 to bright white, so EGA/VGA
+/*		cards work correctly 
+/*	If user asks for more memory than possible, just get max, don't
+/*		die with fatal error
+/*	Add -b flag
+/*	Let game get at linecnt
+/*
+/*37-May 5, 1989
+/*	Build page arrays with <= Game_blocks
+/*	Add EOS and TAB support
+/*	Make highlight chars be just chars, not actions
+/*	Handle underline in char drawing routines
+/*
+/*38-May 8, 1989
+/*	Make underlining work
+/*	Reset Chrptr before dumping buffer
+/*
+/*39-May 11, 1989
+/*	Add Double/Single click differentation
+/*	Add Erase n, where n >= 1
+/*	Add ZIP_GREY and ZIP_BROWN
+/*	Make [MORE] check be >=
+/*	Have md_getl call md_tinp for its input
+/*
+/*40-May 12, 1989
+/*	Incorporated JFachini's scrolling code
+/*
+/*41-May 15, 1989
+/*	Have fatal reset tty mode and use BIOS to print out errors 
+/*
+/*42-May 16, 1989
+/*	Fix CGA for CGA card
+/*	Add Set_palette to say EGA/VGA/MCGA card
+/*
+/*43-May 17, 1989
+/*	Make CGA work with CGA card, by not doing Characters 0x80-0xff
+/*	Byte swap picture version before passing it back to game
+/*
+/*44-May 18, 1989
+/*	Fix underline in MCGA
+/* 	Don't clear to eol on cr/lf, and clear [MORE] with spaces 
+/*	Don't let input line wrap
+/*	CWIDTH gives back mono-spaced font if window is doing that
+/*	Reset CharX in mcrlf, in case nothing is going to the screen
+/*	ScriptFD can be a zero (weird, eh?)
+/*	Don't script non-printable character
+/*	Compare CharX to window edge, not Outbuf/Charbuf, on EOS space
+/*		output
+/*
+/*45-May 24, 1989
+/*	Leave room for the cursor on the input line
+/*	Have save name start at left edge
+/*	Swap how winget returns background/foreground colors (as usual)
+/*	Have picture file extension figgered out at the last minute, base
+/*		upon Display
+/*
+/*46-May 30, 1989
+/*	Add length parameter to zwstr and actually use it
+/*
+/*47-May 31, 1989
+/*	Let CR/LF go through to printer
+/*	Don't script input line
+/*
+/*48-June 2, 1989
+/*	Char count at front of line in formatted table is a word
+/*
+/*49-June 5, 1989
+/*	Fix prt_tblf
+/*	Make picture count be ld_count, not ld_size
+/*	Fix EGA palette
+/*
+/*50-June 8, 1989
+/*	Initialize everything in wind_init
+/*	Use window background color in md_clr
+/*	Divide mouse x pos by 2 if in MCGA mode
+/*	Play some mouse games:
+/*		Don't turn it on at the start of the game
+/*		Make sure it is off before we draw a picture
+/*	Add special loops in graphics for when there is no transparent
+/*		color
+/*	Don't add char on too wide line in non-wrapping window
+/*	Make win_right = x + xsize (no -1)
+/*	Change clear opcode handler
+/*
+/*51-June 9, 1989
+/*	Do split before clear on clr -1
+/*	Add 'nother parameter to do_error
+/*	Ask before deleting save file
+/*	Set the border color in clear_screen in EGA
+/*	Make curpos in window structure be relative, not absolute
+/*
+/*52-June 14, 1989
+/*	Don't start Tblptr @ Table+2 for formatted table
+/*	Don't stuff table count into beginning of formatted table
+/*	Don't skip first word of formatted table in ftblprnt
+/*		and flush line after printing
+/*
+/*53-June 16, 1989
+/*	Default to use MCGA on MCGA board
+/*	Use put_to_screen in errprnt, making sure all the flags are saved,
+/*		set, and restored
+/*	Don't flush buffer @ start of dodirout
+/*	Assume hard drive if error in get_disk_type is 1
+/*	Check for empty line trying to wrap
+/*	Check for abort error in first open for save
+/*
+/*54-June 19, 1989
+/*	Handle change in global file data entry in header is pointer not
+/*		count
+/*	Make farread routines return correct negative error values (i.e.:
+/*		-2 for error #2)
+/*	Make copy of usrnam so it doesn't get changed in parse_filename
+/*	Add small fudge factor to size of undo size
+/*	Swap to window zero in errprnt
+/*	Make only one exit point for sav_res
+/*
+/*55-June 20, 1989
+/*	Play with md_parse_file a little more
+/*	Go look for picture file on other disk
+/*
+/*56-June 21, 1989
+/*	Complain if UNDO wanted and not enough memory
+/*	Take out all references to TANDY (yeah)
+/*
+/*57-June 22, 1989
+/*	On PS/2, default to MCGA
+/*	Don't play with default path in md_parse_file
+/*	Make sure direction is positive in display_char routines
+/*
+/*58-June 26, 1989
+/*	Read in global directory AFTER we get local directory
+/*
+/*59-June 27, 1989
+/*	Don't put in zero at end of table	
+/*	Dumpbuf when ftbl printing is through
+/*	Always have outbuf end with EOL
+/*
+/*60-June 28, 1989
+/*	Make sure direction flag is cleared in scroll and Trivia
+/*	Make home operation use left margin
+/*
+/*61-June 29, 1989
+/*	Reset direction flag in table copy
+/*	Check for good character first, then mono spaced, then MCGA mode,
+/*		in CWIDTH macro
+/*	Don't flush buffer @start of table print
+/*	Make halloc for global picture directory use sizeof int
+/*	New graphics.asm from TAA
+/*	Jump to dos_fatal if badness in far_read
+/*	Fix one last time the PS/2 check
+/*	Muck with check script 
+/*		No game open means game channel < 0
+/*	Add File_script to show scripting to a file, rather than Scrptfd
+/*		being less than zero
+/*
+/*62-June 30, 1989
+/*	Don't reset CharX in <CR> unless video is on
+/*	Fix test in Blit_EGA for no transparency--was looking at
+/*	DS:TransColor after DS was trashed, so getting spurious results.
+/*	-taa
+/*
+/*63-July 5, 1989
+/*	Only change CharX in put_to_screen if actually displaying
+/*		characters or doing formatted table output 
+/*	Change way of opening files initially: first, look for picture file
+/*		then look for game file, on some disk somewhere!
+/*	Give user option to quit when asking for game/picture file disk
+/*	Initialize the file handles to -1
+/*	Ask for specific Picture file disk
+/*	Fix bugs in display of cga pix with no transparency (TAA)
+/*	Make cursor wrap if necessary
+/*
+/*64-July 6, 1989
+/*	Get drive picture file starts in and ask for disk to be put back
+/*		there if it can't be opened later
+/*	Just 10 bits for picture id in global directory, and shift by only
+/*		9 to get the correct (1 offset) file id
+/*	Ask for picture disk according to game
+/*	If none of the display checks work, set display to CGA
+/*	Add in defaults for various games, including name
+/*
+/*65-July 6, 1989
+/*	Make GBL_FILE_ID macro invocation be a little better
+/*66-July 7, 1989
+/*	Open game file first, then picture file
+/*	Put in correct copyright stuff
+/*	Make it so Disk questions doesn't use md_putc
+/*67-July 7, 1989
+/*	Add No_abort flag to picture file/game file openers
+/*	Released version
+/*****************************************************************/
+

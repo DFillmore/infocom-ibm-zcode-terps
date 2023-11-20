@@ -1,0 +1,6 @@
+Turbo C  Version 2.0  Copyright (c) 1987, 1988 Borland International
+sysdep1.c:
+Error c:\bin\tc\include\dos.h 192: Type mismatch in redeclaration of 'int86x'
+*** 1 errors in Compile ***
+
+	Available memory 219872
